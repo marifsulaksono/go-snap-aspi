@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func GetB2BToken(request *GetB2BTokenRequest) (response *GetB2BTokenResponse, err error) {
@@ -40,13 +41,24 @@ func GetB2BToken(request *GetB2BTokenRequest) (response *GetB2BTokenResponse, er
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Println(resp.Body)
 		err = errors.New("failed to get token b2b")
 		return
 	}
 
 	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return
+	}
+
+	return
+}
+
+func GenerateSignatureService(request *GenerateSignatureServiceRequest) (response *GenerateSignatureServiceResponse, err error) {
+	lowerHexPayload := strings.ToLower(CreateHexEncodePayload(request.Body))
+	stringToSign := fmt.Sprintf("%s:%s:%s:%s:%s", request.EndpointMethod, request.EndpointURL, request.Token, lowerHexPayload, request.Timestamp)
+
+	signature := GenerateSymmetricSignature(os.Getenv("CLIENT_SECRET"), stringToSign)
+	response = &GenerateSignatureServiceResponse{
+		Signature: signature,
 	}
 
 	return
